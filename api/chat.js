@@ -1,19 +1,74 @@
+// 验证问题是否有效
+function isValidQuestion(question) {
+  const q = question.trim();
+  
+  if (!q) return false;
+  
+  // 纯数字
+  if (/^\d+$/.test(q)) return false;
+  
+  // 纯符号（如 "？""。"""!" 等）
+  if (/^[？。.!！]+$/.test(q)) return false;
+  
+  // 单个字符且不是中文或问号结尾的有效问题
+  if (q.length <= 2 && !/[\u4e00-\u9fa5]/.test(q) && !q.includes('?')) {
+    // 允许简短的有效问题如 "有人吗?""他在哪?"
+    if (!q.endsWith('?') && !q.endsWith('？') && !q.endsWith('吗') && !q.endsWith('么')) {
+      return false;
+    }
+  }
+  
+  // 纯字母
+  if (/^[a-zA-Z]+$/.test(q)) return false;
+  
+  return true;
+}
+
 // 归一化回答
 function normalizeAnswer(raw) {
   const t = raw.trim();
   
-  // 处理问题不够明确的情况
+  // 1. 优先处理问题不够明确的情况
   if (t.includes('问题不够明确')) {
     return '问题不够明确，请换一种问法';
   }
   
-  // 匹配标准回答
-  const match = t.match(/(是|否|无关)/);
-  if (match) {
-    return match[1];
+  // 2. 检查否定表达 - 优先判断"否"
+  // 否定关键词列表（按优先级排序，精确匹配优先）
+  const negativePatterns = [
+    { pattern: /^否$/, answer: '否' },                    // 纯"否"
+    { pattern: /^(不是|并不是|不对|没有|不能|不存在|并未|并未曾|并未有)/, answer: '否' },  // 否定词开头
+    { pattern: /(不是|并不是|不对|没有|不能|不存在|并未)/, answer: '否' },  // 否定词在任何位置
+  ];
+  
+  for (const { pattern, answer } of negativePatterns) {
+    if (pattern.test(t)) {
+      return answer;
+    }
   }
   
-  // 处理不规范回答，默认返回无关
+  // 3. 检查肯定表达 - 判断"是"
+  // 肯定关键词列表
+  const positivePatterns = [
+    { pattern: /^是$/, answer: '是' },                    // 纯"是"
+    { pattern: /^(是的|是的，|是对)/, answer: '是' },    // "是"开头
+    { pattern: /^(对|对的|对，)/, answer: '是' },        // "对"开头
+    { pattern: /^(有|有的|有，)/, answer: '是' },        // "有"开头
+    { pattern: /(是|是的|对|对的|有|有的)/, answer: '是' },  // 肯定词在任何位置
+  ];
+  
+  for (const { pattern, answer } of positivePatterns) {
+    if (pattern.test(t)) {
+      return answer;
+    }
+  }
+  
+  // 4. 检查"无关"关键词
+  if (t.includes('无关')) {
+    return '无关';
+  }
+  
+  // 5. 无法判断，默认返回无关
   console.warn('不规范回答，已归一化为无关:', raw);
   return '无关';
 }
@@ -40,6 +95,35 @@ export default async function handler(req, res) {
         bottom: !!story.bottom 
       });
       return res.status(400).json({ error: 'story 结构不完整，需要包含 title、surface、bottom' });
+    }
+    
+    // 验证问题有效性
+    const trimmedQuestion = question.trim();
+    if (!trimmedQuestion) {
+      console.error('问题为空或无效');
+      return res.status(400).json({ error: '问题不能为空' });
+    }
+    
+    if (trimmedQuestion.length > 200) {
+      console.error('问题过长:', trimmedQuestion.length);
+      return res.status(400).json({ error: '问题长度不能超过200个字符' });
+    }
+    
+    // 检查问题是否包含非法内容
+    const invalidPatterns = ['汤底', '答案', '剧透', '告诉我答案', '泄露'];
+    const hasInvalidContent = invalidPatterns.some(pattern => 
+      trimmedQuestion.toLowerCase().includes(pattern.toLowerCase())
+    );
+    
+    if (hasInvalidContent) {
+      console.error('问题包含非法内容');
+      return res.status(400).json({ error: '问题中不能包含试图获取答案的内容' });
+    }
+    
+    // 检查问题是否有效（纯数字、纯符号等无效问题）
+    if (!isValidQuestion(question)) {
+      console.log('无效问题，直接返回提示:', question);
+      return res.json({ answer: '问题不够明确，请换一种问法' });
     }
     
     // 读取环境变量中的 API Key
