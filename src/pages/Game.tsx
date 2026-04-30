@@ -52,7 +52,7 @@ export function Game() {
   }
 
   return (
-    <div className="relative min-h-svh">
+    <div className="relative h-svh overflow-hidden">
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_-10%,rgba(67,56,202,0.12),transparent)]"
         aria-hidden
@@ -62,7 +62,7 @@ export function Game() {
         aria-hidden
       />
 
-      <main className="relative mx-auto flex min-h-svh max-w-3xl flex-col px-4 pb-12 pt-6 sm:px-6 sm:pb-16 sm:pt-8">
+      <main className="relative mx-auto h-svh w-full max-w-3xl grid grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden px-4 pt-6 sm:px-6 sm:pt-8">
         <Link
           to="/"
           className="shrink-0 text-sm text-indigo-400/90 transition hover:text-indigo-300"
@@ -71,7 +71,7 @@ export function Game() {
           ← 返回大厅
         </Link>
 
-        <header className="mt-6 shrink-0 space-y-4">
+        <header className="shrink-0 space-y-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">
               {story.title}
@@ -92,13 +92,13 @@ export function Game() {
         </header>
 
         <section
-          className="mt-8 min-h-0 flex-1"
+          className="min-h-0 overflow-hidden"
           aria-label="与主持人对话"
         >
           <ChatBox story={story} />
         </section>
 
-        <footer className="mt-8 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <footer className="shrink-0 flex flex-col gap-3 border-t border-slate-800/60 bg-slate-950/30 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <p className="text-xs text-slate-600 sm:max-w-[14rem]">
             推理告一段落时，可揭晓汤底或结束本局。
           </p>
